@@ -14,9 +14,6 @@ all: $(SOURCES) $(EXECUTABLE)
 $(EXECUTABLE): $(OBJECTS)
 	$(CXX) $(LDFLAGS) $(OBJECTS) -o $@ $(INC) $(OPTIONS)
 
-test: $(EXECUTABLE)
-	./$(EXECUTABLE) arg1 arg2
-
 clean:
 	-rm $(OBJECTS) $(EXECUTABLE)
 
