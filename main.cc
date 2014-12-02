@@ -24,8 +24,8 @@ unsigned int calculatePixelCostOneWayBT(unsigned int leftCol, unsigned int right
         afterRightValue = rightValue;
     }
 
-    rightValueMinus = std::round((rightValue + beforeRightValue) / 2.f);
-    rightValuePlus = std::round((rightValue + afterRightValue) / 2.f);
+    rightValueMinus = round((rightValue + beforeRightValue) / 2.f);
+    rightValuePlus = round((rightValue + afterRightValue) / 2.f);
 
     rightValueMin = std::min(rightValue, std::min(rightValueMinus, rightValuePlus));
     rightValueMax = std::max(rightValue, std::max(rightValueMinus, rightValuePlus));
