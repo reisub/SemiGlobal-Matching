@@ -14,6 +14,12 @@ all: $(SOURCES) $(EXECUTABLE)
 $(EXECUTABLE): $(OBJECTS)
 	$(CXX) $(LDFLAGS) $(OBJECTS) -o $@ $(INC) $(OPTIONS)
 
+cones: $(EXECUTABLE)
+	./$(EXECUTABLE) test/cones/im2.png test/cones/im6.png
+
+teddy: $(EXECUTABLE)
+	./$(EXECUTABLE) test/teddy/im2.png test/teddy/im6.png
+
 clean:
 	-rm $(OBJECTS) $(EXECUTABLE)
 
