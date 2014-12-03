@@ -74,7 +74,7 @@ void calculateDisparityMap(cv::Mat &leftImage, cv::Mat &rightImage, cv::Mat &dis
     for (unsigned int row = 0; row < leftImage.rows; ++row) {
         for (int col = 0; col < leftImage.cols; ++col) {
             unsigned char disparity = calculateDisparity(row, col, disparityRange, leftImage, rightImage);
-            disparityMap.at<uchar>(row, col) = disparity * 7;
+            disparityMap.at<uchar>(row, col) = disparity * (255.0 / disparityRange);
         }
     }
 }
