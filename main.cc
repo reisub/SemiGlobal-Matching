@@ -8,7 +8,7 @@
 #define SMALL_PENALTY 1.0
 #define LARGE_PENALTY 3.0
 
-unsigned int calculatePixelCostOneWayBT(unsigned int leftCol, unsigned int rightCol, unsigned int row, const cv::Mat &leftImage, const cv::Mat &rightImage) {
+unsigned int calculatePixelCostOneWayBT(unsigned int row, unsigned int leftCol, unsigned int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
 
     unsigned char leftValue, rightValue, beforeRightValue, afterRightValue, rightValueMinus, rightValuePlus, rightValueMin, rightValueMax;
 
@@ -70,6 +70,15 @@ unsigned int calculateDisparity(unsigned int row, unsigned int col, unsigned int
     return abs(disparity);
 }
 
+void calculateDisparityMap(cv::Mat &leftImage, cv::Mat &rightImage, cv::Mat &disparityMap, unsigned int disparityRange) {
+    for (unsigned int row = 0; row < leftImage.rows; ++row) {
+        for (int col = 0; col < leftImage.cols; ++col) {
+            unsigned char disparity = calculateDisparity(row, col, disparityRange, leftImage, rightImage);
+            disparityMap.at<uchar>(row, col) = disparity * 7;
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     if (argc != 3) {
         std::cerr << "Usage: " << argv[0] << " <first image> <second image>" << std::endl;
@@ -87,15 +96,9 @@ int main(int argc, char** argv) {
     }
 
     cv::Mat disparityMap = cv::Mat(cv::Size(firstImage.cols, firstImage.rows), CV_8UC1, cv::Scalar::all(0));
-    unsigned int disparityRange = 16;
+    unsigned int disparityRange = 32;
 
-    for (unsigned int row = 0; row < firstImage.rows; ++row) {
-        for (int col = 0; col < firstImage.cols; ++col) {
-            // TODO clone mat
-            unsigned char disparity = calculateDisparity(row, col, disparityRange, firstImage, secondImage);
-            disparityMap.at<uchar>(row, col) = disparity * 15;
-        }
-    }
+    calculateDisparityMap(firstImage, secondImage, disparityMap, disparityRange);
 
     cv::namedWindow("Disparity map", CV_WINDOW_AUTOSIZE);
     cv::imshow("Disparity map", disparityMap);
