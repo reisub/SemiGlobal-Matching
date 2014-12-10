@@ -5,12 +5,12 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#define SMALL_PENALTY 1.0
-#define LARGE_PENALTY 3.0
+#define SMALL_PENALTY 1
+#define LARGE_PENALTY 5
 
-unsigned int calculatePixelCostOneWayBT(unsigned int row, unsigned int leftCol, unsigned int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
+unsigned int calculatePixelCostOneWayBT(int row, int leftCol, int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
 
-    unsigned char leftValue, rightValue, beforeRightValue, afterRightValue, rightValueMinus, rightValuePlus, rightValueMin, rightValueMax;
+    char leftValue, rightValue, beforeRightValue, afterRightValue, rightValueMinus, rightValuePlus, rightValueMin, rightValueMax;
 
     leftValue = leftImage.at<uchar>(row, leftCol);
     rightValue = rightImage.at<uchar>(row, rightCol);
@@ -36,13 +36,33 @@ unsigned int calculatePixelCostOneWayBT(unsigned int row, unsigned int leftCol, 
     return std::max(0, std::max((leftValue - rightValueMax), (rightValueMin - leftValue)));
 }
 
-unsigned int calculatePixelCostBT(unsigned int row, unsigned int leftCol, unsigned int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
-    // TODO memoization using hash map
+int calculatePixelCostBT(int row, int leftCol, int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
     return std::min(calculatePixelCostOneWayBT(row, leftCol, rightCol, leftImage, rightImage),
         calculatePixelCostOneWayBT(row, rightCol, leftCol, rightImage, leftImage));
 }
 
-double calculateGlobalCost(unsigned int row, unsigned int leftCol, unsigned int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
+void calculatePixelCost(cv::Mat &firstImage, cv::Mat &secondImage, int disparityRange, unsigned short ***C) {
+    for (int row = 0; row < firstImage.rows; ++row) {
+        for (int col = 0; col < firstImage.cols; ++col) {
+            for (int d = 0; d < disparityRange; ++d) {
+                C[row][col][d] = calculatePixelCostBT(row, col, col - d, firstImage, secondImage);
+            }
+        }
+    }
+}
+
+void calculateAggregatedCost(cv::Mat &firstImage, cv::Mat &secondImage, int disparityRange, unsigned short ***C, unsigned short ***S) {
+    for (int row = 0; row < firstImage.rows; ++row) {
+        for (int col = 0; col < firstImage.cols; ++col) {
+            for (int d = 0; d < disparityRange; ++d) {
+                C[row][col][d] = calculatePixelCostBT(row, col, col - d, firstImage, secondImage);
+            }
+        }
+    }
+}
+
+
+double calculateGlobalCost(int row, int leftCol, int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
     double globalCost = 0.0;
 
     globalCost += calculatePixelCostBT(row, leftCol, rightCol, leftImage, rightImage);
@@ -51,27 +71,27 @@ double calculateGlobalCost(unsigned int row, unsigned int leftCol, unsigned int 
     return globalCost;
 }
 
-unsigned int calculateDisparity(unsigned int row, unsigned int col, unsigned int disparityRange, const cv::Mat &leftImage, const cv::Mat &rightImage) {
+int calculateDisparity(int row, int col, int disparityRange, const cv::Mat &leftImage, const cv::Mat &rightImage) {
     int disparity = 0;
     double minGlobalCost = 1e10;
     double globalCost;
 
     unsigned int startCol = (col - disparityRange >= 0) ? (col - disparityRange) : 0;
-    unsigned int endCol = (col + disparityRange < leftImage.cols) ? (col + disparityRange) : (leftImage.cols - 1);
+    unsigned int endCol = col;
 
     for (unsigned int currentCol = startCol; currentCol <= endCol; ++currentCol) {
         double globalCost = calculateGlobalCost(row, col, currentCol, leftImage, rightImage);
         if (globalCost < minGlobalCost) {
             minGlobalCost = globalCost;
-            disparity = currentCol - col;
+            disparity = col - currentCol;
         }
     }
 
-    return abs(disparity);
+    return disparity;
 }
 
 void calculateDisparityMap(cv::Mat &leftImage, cv::Mat &rightImage, cv::Mat &disparityMap, unsigned int disparityRange) {
-    for (unsigned int row = 0; row < leftImage.rows; ++row) {
+    for (int row = 0; row < leftImage.rows; ++row) {
         for (int col = 0; col < leftImage.cols; ++col) {
             unsigned char disparity = calculateDisparity(row, col, disparityRange, leftImage, rightImage);
             disparityMap.at<uchar>(row, col) = disparity * (255.0 / disparityRange);
@@ -81,7 +101,7 @@ void calculateDisparityMap(cv::Mat &leftImage, cv::Mat &rightImage, cv::Mat &dis
 
 int main(int argc, char** argv) {
     if (argc != 3) {
-        std::cerr << "Usage: " << argv[0] << " <first image> <second image>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <left image> <right image>" << std::endl;
         return -1;
     }
 
@@ -95,8 +115,25 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    cv::Mat disparityMap = cv::Mat(cv::Size(firstImage.cols, firstImage.rows), CV_8UC1, cv::Scalar::all(0));
     unsigned int disparityRange = 32;
+    unsigned short ***C; // pixel cost array W x H x D
+    unsigned short ***S; // aggregated cost array W x H x D
+
+    // allocate cost arrays
+    C = new unsigned short**[firstImage.rows];
+    S = new unsigned short**[firstImage.rows];
+    for (int row = 0; row < firstImage.rows; ++row) {
+        C[row] = new unsigned short*[firstImage.cols];
+        S[row] = new unsigned short*[firstImage.cols]();
+        for (int col = 0; col < firstImage.cols; ++col) {
+            C[row][col] = new unsigned short[disparityRange];
+            S[row][col] = new unsigned short[disparityRange](); // initialize to 0
+        }
+    }
+
+    calculatePixelCost(firstImage, secondImage, disparityRange, C);
+
+    cv::Mat disparityMap = cv::Mat(cv::Size(firstImage.cols, firstImage.rows), CV_8UC1, cv::Scalar::all(0));
 
     calculateDisparityMap(firstImage, secondImage, disparityMap, disparityRange);
 
