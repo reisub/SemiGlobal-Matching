@@ -5,10 +5,25 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#define SMALL_PENALTY 1
-#define LARGE_PENALTY 5
+#define PATH_COUNT 8
+#define MAX_SHORT 65535
+#define SMALL_PENALTY 2
+#define LARGE_PENALTY 10
+#define DEBUG false
 
-unsigned int calculatePixelCostOneWayBT(int row, int leftCol, int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
+void printArray(unsigned short ***array, int rows, int cols, int depth) {
+    for (int d = 0; d < depth; ++d) {
+        std::cout << "disparity: " << d << std::endl;
+        for (int row = 0; row < rows; ++row) {
+            for (int col = 0; col < cols; ++col) {
+                std::cout << "\t" << array[row][col][d];
+            }
+            std::cout << std::endl;
+        }
+    }
+}
+
+unsigned short calculatePixelCostOneWayBT(int row, int leftCol, int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
 
     char leftValue, rightValue, beforeRightValue, afterRightValue, rightValueMinus, rightValuePlus, rightValueMin, rightValueMax;
 
@@ -36,7 +51,7 @@ unsigned int calculatePixelCostOneWayBT(int row, int leftCol, int rightCol, cons
     return std::max(0, std::max((leftValue - rightValueMax), (rightValueMin - leftValue)));
 }
 
-int calculatePixelCostBT(int row, int leftCol, int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
+unsigned short calculatePixelCostBT(int row, int leftCol, int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
     return std::min(calculatePixelCostOneWayBT(row, leftCol, rightCol, leftImage, rightImage),
         calculatePixelCostOneWayBT(row, rightCol, leftCol, rightImage, leftImage));
 }
@@ -51,12 +66,103 @@ void calculatePixelCost(cv::Mat &firstImage, cv::Mat &secondImage, int disparity
     }
 }
 
-void aggregateCosts(int rows, int cols, int disparityRange, unsigned short ***C, unsigned short ***S) {
+unsigned int getPathIndex(short rowDiff, short colDiff) {
+    if (rowDiff == -1 && colDiff == 0) return 0; // W
+    if (rowDiff == 0 && colDiff == 1) return 1; // N
+    if (rowDiff == 1 && colDiff == 0) return 2; // E
+    if (rowDiff == 0 && colDiff == -1) return 3; // S
+    if (rowDiff == -1 && colDiff == 1) return 4; // NW
+    if (rowDiff == 1 && colDiff == 1) return 5; // NE
+    if (rowDiff == 1 && colDiff == -1) return 6; // SE
+    if (rowDiff == -1 && colDiff == -1) return 7; // SW
+
+    return -1;
+}
+
+unsigned short aggregateCost(int row, int col, int d, short rowDiff, short colDiff, int rows, int cols, int disparityRange, unsigned short ***C, unsigned short ****A, unsigned short ***S, unsigned int iter) {
+    unsigned short aggregatedCost = 0;
+    aggregatedCost += C[row][col][d];
+
+    if(DEBUG) {
+        for (unsigned int i = 0; i < iter; ++i) {
+            printf(" ");
+        }
+        printf("{P%d}[%d][%d](d%d)\n", getPathIndex(rowDiff, colDiff), row, col, d);
+    }
+
+    if (A[getPathIndex(rowDiff, colDiff)][row][col][d] != MAX_SHORT) {
+        if(DEBUG) {
+            for (unsigned int i = 0; i < iter; ++i) {
+                printf(" ");
+            }
+            printf("{P%d}[%d][%d](d%d)-> %d<CACHED>\n", getPathIndex(rowDiff, colDiff), row, col, d, A[getPathIndex(rowDiff, colDiff)][row][col][d]);
+        }
+        return A[getPathIndex(rowDiff, colDiff)][row][col][d];
+    }
+
+    if (row + rowDiff < 0 || row + rowDiff >= rows || col + colDiff < 0 || col + colDiff >= cols) {
+        // border
+        A[getPathIndex(rowDiff, colDiff)][row][col][d] = aggregatedCost;
+        if(DEBUG) {
+            for (unsigned int i = 0; i < iter; ++i) {
+                printf(" ");
+            }
+            printf("{P%d}[%d][%d](d%d)-> %d <BORDER>\n", getPathIndex(rowDiff, colDiff), row, col, d, A[getPathIndex(rowDiff, colDiff)][row][col][d]);
+        }
+        return A[getPathIndex(rowDiff, colDiff)][row][col][d];
+
+        return aggregatedCost;
+    }
+
+    unsigned short minPrev, minPrevOther, prev, prevPlus, prevMinus;
+    minPrev = minPrevOther = prevPlus = prevMinus = MAX_SHORT;
+
+    for (int disp = 0; disp < disparityRange; ++disp) {
+        unsigned short tmp = aggregateCost(row + rowDiff, col + colDiff, disp, rowDiff, colDiff, rows, cols, disparityRange, C, A, S, ++iter);
+        if(minPrev > tmp) {
+            minPrev = tmp;
+        }
+
+        if(disp == d) {
+            prev = tmp;
+        } else if(disp == d + 1) {
+            prevPlus = tmp;
+        } else if (disp == d - 1) {
+            prevMinus = tmp;
+        } else {
+            if(minPrevOther > tmp + LARGE_PENALTY) {
+                minPrevOther = tmp + LARGE_PENALTY;
+            }
+        }
+    }
+
+    aggregatedCost += std::min(std::min((int)prevPlus + SMALL_PENALTY, (int)prevMinus + SMALL_PENALTY), std::min((int)prev, (int)minPrevOther + LARGE_PENALTY));
+    aggregatedCost -= minPrev;
+
+    A[getPathIndex(rowDiff, colDiff)][row][col][d] = aggregatedCost;
+
+    if(DEBUG) {
+        for (unsigned int i = 0; i < iter; ++i) {
+            printf(" ");
+        }
+        printf("{P%d}[%d][%d](d%d)-> %d<CALCULATED>\n", getPathIndex(rowDiff, colDiff), row, col, d, A[getPathIndex(rowDiff, colDiff)][row][col][d]);
+    }
+
+    return aggregatedCost;
+}
+
+void aggregateCosts(int rows, int cols, int disparityRange, unsigned short ***C, unsigned short ****A, unsigned short ***S) {
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
             for (int d = 0; d < disparityRange; ++d) {
-                // TODO implement!
-                S[row][col][d] = C[row][col][d];
+                S[row][col][d] += aggregateCost(row, col, d, 0, -1, rows, cols, disparityRange, C, A, S, 0);
+                S[row][col][d] += aggregateCost(row, col, d, 0, 1, rows, cols, disparityRange, C, A, S, 0);
+                S[row][col][d] += aggregateCost(row, col, d, 1, 0, rows, cols, disparityRange, C, A, S, 0);
+                S[row][col][d] += aggregateCost(row, col, d, -1, 0, rows, cols, disparityRange, C, A, S, 0);
+                S[row][col][d] += aggregateCost(row, col, d, 1, 1, rows, cols, disparityRange, C, A, S, 0);
+                S[row][col][d] += aggregateCost(row, col, d, 1, -1, rows, cols, disparityRange, C, A, S, 0);
+                S[row][col][d] += aggregateCost(row, col, d, -1, 1, rows, cols, disparityRange, C, A, S, 0);
+                S[row][col][d] += aggregateCost(row, col, d, -1, -1, rows, cols, disparityRange, C, A, S, 0);
             }
         }
     }
@@ -67,7 +173,7 @@ void computeDisparity(unsigned short ***S, int rows, int cols, int disparityRang
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
             minCost = 65535;
-            for (int d = 0; d < disparityRange; ++d) {
+            for (int d = disparityRange - 1; d >= 0; --d) {
                 if(minCost > S[row][col][d]) {
                     minCost = S[row][col][d];
                     disparity = d;
@@ -110,6 +216,7 @@ int main(int argc, char** argv) {
     unsigned int disparityRange = 32;
     unsigned short ***C; // pixel cost array W x H x D
     unsigned short ***S; // aggregated cost array W x H x D
+    unsigned short ****A; // path cost array P x W x H x D
 
     // allocate cost arrays
     C = new unsigned short**[firstImage.rows];
@@ -123,8 +230,25 @@ int main(int argc, char** argv) {
         }
     }
 
+    A = new unsigned short ***[PATH_COUNT];
+    for (int p = 0; p < PATH_COUNT; ++p) {
+        A[p] = new unsigned short **[firstImage.rows];
+        for (int row = 0; row < firstImage.rows; ++row) {
+            A[p][row] = new unsigned short*[firstImage.cols];
+            for (int col = 0; col < firstImage.cols; ++col) {
+                A[p][row][col] = new unsigned short[disparityRange];
+                for (unsigned int d = 0; d < disparityRange; ++d) {
+                    A[p][row][col][d] = MAX_SHORT;
+                }
+            }
+        }
+    }
+
     calculatePixelCost(firstImage, secondImage, disparityRange, C);
-    aggregateCosts(firstImage.rows, firstImage.cols, disparityRange, C, S);
+    if(DEBUG) {
+        printArray(C, firstImage.rows, firstImage.cols, disparityRange);
+    }
+    aggregateCosts(firstImage.rows, firstImage.cols, disparityRange, C, A, S);
 
     cv::Mat disparityMap = cv::Mat(cv::Size(firstImage.cols, firstImage.rows), CV_8UC1, cv::Scalar::all(0));
 
