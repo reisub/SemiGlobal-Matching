@@ -1,14 +1,18 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <ctime>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+#include "gaussian.h"
+
+#define BLUR_RADIUS 3
 #define PATH_COUNT 8
 #define MAX_SHORT 65535
-#define SMALL_PENALTY 2
-#define LARGE_PENALTY 10
+#define SMALL_PENALTY 5
+#define LARGE_PENALTY 20
 #define DEBUG false
 
 void printArray(unsigned short ***array, int rows, int cols, int depth) {
@@ -51,7 +55,7 @@ unsigned short calculatePixelCostOneWayBT(int row, int leftCol, int rightCol, co
     return std::max(0, std::max((leftValue - rightValueMax), (rightValueMin - leftValue)));
 }
 
-unsigned short calculatePixelCostBT(int row, int leftCol, int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
+inline unsigned short calculatePixelCostBT(int row, int leftCol, int rightCol, const cv::Mat &leftImage, const cv::Mat &rightImage) {
     return std::min(calculatePixelCostOneWayBT(row, leftCol, rightCol, leftImage, rightImage),
         calculatePixelCostOneWayBT(row, rightCol, leftCol, rightImage, leftImage));
 }
@@ -66,7 +70,7 @@ void calculatePixelCost(cv::Mat &firstImage, cv::Mat &secondImage, int disparity
     }
 }
 
-unsigned int getPathIndex(short rowDiff, short colDiff) {
+inline unsigned int getPathIndex(short rowDiff, short colDiff) {
     if (rowDiff == -1 && colDiff == 0) return 0; // W
     if (rowDiff == 0 && colDiff == 1) return 1; // N
     if (rowDiff == 1 && colDiff == 0) return 2; // E
@@ -198,6 +202,7 @@ void showDisparityMap(cv::Mat &disparityMap, int disparityRange) {
 
 
 int main(int argc, char** argv) {
+
     if (argc != 3) {
         std::cerr << "Usage: " << argv[0] << " <left image> <right image>" << std::endl;
         return -1;
@@ -217,6 +222,10 @@ int main(int argc, char** argv) {
     unsigned short ***C; // pixel cost array W x H x D
     unsigned short ***S; // aggregated cost array W x H x D
     unsigned short ****A; // path cost array P x W x H x D
+
+    clock_t begin = clock();
+
+    std::cout << "Allocating space..." << std::endl;
 
     // allocate cost arrays
     C = new unsigned short**[firstImage.rows];
@@ -244,15 +253,28 @@ int main(int argc, char** argv) {
         }
     }
 
+    // std::cout << "Smoothing images..." << std::endl;
+    // grayscaleGaussianBlur(firstImage, firstImage, BLUR_RADIUS);
+    // grayscaleGaussianBlur(secondImage, secondImage, BLUR_RADIUS);
+
+    std::cout << "Calculating pixel cost for the image..." << std::endl;
     calculatePixelCost(firstImage, secondImage, disparityRange, C);
     if(DEBUG) {
         printArray(C, firstImage.rows, firstImage.cols, disparityRange);
     }
+    std::cout << "Aggregating costs..." << std::endl;
     aggregateCosts(firstImage.rows, firstImage.cols, disparityRange, C, A, S);
 
     cv::Mat disparityMap = cv::Mat(cv::Size(firstImage.cols, firstImage.rows), CV_8UC1, cv::Scalar::all(0));
 
+    std::cout << "Computing disparity..." << std::endl;
     computeDisparity(S, firstImage.rows, firstImage.cols, disparityRange, disparityMap);
+
+    clock_t end = clock();
+    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+
+    printf("Done in %.2lf seconds.\n", elapsed_secs);
+
     showDisparityMap(disparityMap, disparityRange);
 
     return 0;
