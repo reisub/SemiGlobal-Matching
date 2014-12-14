@@ -23,6 +23,12 @@ cones: $(EXECUTABLE)
 teddy: $(EXECUTABLE)
 	./$(EXECUTABLE) test/teddy/im2.png test/teddy/im6.png
 
+bull: $(EXECUTABLE)
+	./$(EXECUTABLE) test/bull/im2.png test/bull/im6.png
+
+venus: $(EXECUTABLE)
+	./$(EXECUTABLE) test/venus/im2.png test/venus/im6.png
+
 clean:
 	-rm $(OBJECTS) $(EXECUTABLE)
 
