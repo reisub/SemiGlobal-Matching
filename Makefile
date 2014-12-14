@@ -18,16 +18,16 @@ simple: $(EXECUTABLE)
 	./$(EXECUTABLE) test/simple/left.png test/simple/right.png
 
 cones: $(EXECUTABLE)
-	./$(EXECUTABLE) test/cones/im2.png test/cones/im6.png
+	./$(EXECUTABLE) test/cones/im2.png test/cones/im6.png 64
 
 teddy: $(EXECUTABLE)
-	./$(EXECUTABLE) test/teddy/im2.png test/teddy/im6.png
+	./$(EXECUTABLE) test/teddy/im2.png test/teddy/im6.png 64
 
 bull: $(EXECUTABLE)
-	./$(EXECUTABLE) test/bull/im2.png test/bull/im6.png
+	./$(EXECUTABLE) test/bull/im2.png test/bull/im6.png 32
 
 venus: $(EXECUTABLE)
-	./$(EXECUTABLE) test/venus/im2.png test/venus/im6.png
+	./$(EXECUTABLE) test/venus/im2.png test/venus/im6.png 32
 
 clean:
 	-rm $(OBJECTS) $(EXECUTABLE)

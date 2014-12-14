@@ -11,7 +11,7 @@
 #define BLUR_RADIUS 3
 #define PATH_COUNT 8
 #define MAX_SHORT 65535
-#define SMALL_PENALTY 5
+#define SMALL_PENALTY 3
 #define LARGE_PENALTY 20
 #define DEBUG false
 
@@ -203,8 +203,8 @@ void showDisparityMap(cv::Mat &disparityMap, int disparityRange) {
 
 int main(int argc, char** argv) {
 
-    if (argc != 3) {
-        std::cerr << "Usage: " << argv[0] << " <left image> <right image>" << std::endl;
+    if (argc != 4) {
+        std::cerr << "Usage: " << argv[0] << " <left image> <right image> <disparity range>" << std::endl;
         return -1;
     }
 
@@ -218,7 +218,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    unsigned int disparityRange = 32;
+    unsigned int disparityRange = atoi(argv[3]);
     unsigned short ***C; // pixel cost array W x H x D
     unsigned short ***S; // aggregated cost array W x H x D
     unsigned short ****A; // path cost array P x W x H x D
@@ -253,9 +253,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    // std::cout << "Smoothing images..." << std::endl;
-    // grayscaleGaussianBlur(firstImage, firstImage, BLUR_RADIUS);
-    // grayscaleGaussianBlur(secondImage, secondImage, BLUR_RADIUS);
+    std::cout << "Smoothing images..." << std::endl;
+    grayscaleGaussianBlur(firstImage, firstImage, BLUR_RADIUS);
+    grayscaleGaussianBlur(secondImage, secondImage, BLUR_RADIUS);
 
     std::cout << "Calculating pixel cost for the image..." << std::endl;
     calculatePixelCost(firstImage, secondImage, disparityRange, C);
