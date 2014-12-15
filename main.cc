@@ -1,5 +1,6 @@
 #include <iostream>
 #include <algorithm>
+#include <vector>
 #include <cmath>
 #include <ctime>
 
@@ -14,6 +15,12 @@
 #define SMALL_PENALTY 3
 #define LARGE_PENALTY 20
 #define DEBUG false
+
+struct path {
+    short rowDiff;
+    short colDiff;
+    short index;
+};
 
 void printArray(unsigned short ***array, int rows, int cols, int depth) {
     for (int d = 0; d < depth; ++d) {
@@ -70,20 +77,83 @@ void calculatePixelCost(cv::Mat &firstImage, cv::Mat &secondImage, int disparity
     }
 }
 
-inline unsigned int getPathIndex(short rowDiff, short colDiff) {
-    if (rowDiff == -1 && colDiff == 0) return 0; // W
-    if (rowDiff == 0 && colDiff == 1) return 1; // N
-    if (rowDiff == 1 && colDiff == 0) return 2; // E
-    if (rowDiff == 0 && colDiff == -1) return 3; // S
-    if (rowDiff == -1 && colDiff == 1) return 4; // NW
-    if (rowDiff == 1 && colDiff == 1) return 5; // NE
-    if (rowDiff == 1 && colDiff == -1) return 6; // SE
-    if (rowDiff == -1 && colDiff == -1) return 7; // SW
+void initializePaths(std::vector<path> &paths, unsigned short pathCount) {
+    for (unsigned short i = 0; i < pathCount; ++i) {
+        paths.push_back(path());
+    }
 
-    return -1;
+    if(paths.size() >= 4) {
+        paths[0].rowDiff = -1;
+        paths[0].colDiff = 0;
+        paths[0].index = 0;
+
+        paths[1].rowDiff = 0;
+        paths[1].colDiff = 1;
+        paths[1].index = 1;
+
+        paths[2].rowDiff = 1;
+        paths[2].colDiff = 0;
+        paths[2].index = 2;
+
+        paths[3].rowDiff = 0;
+        paths[3].colDiff = -1;
+        paths[3].index = 3;
+    }
+
+    if(paths.size() >= 8) {
+        paths[4].rowDiff = -1;
+        paths[4].colDiff = 1;
+        paths[4].index = 4;
+
+        paths[5].rowDiff = 1;
+        paths[5].colDiff = 1;
+        paths[5].index = 5;
+
+        paths[6].rowDiff = 1;
+        paths[6].colDiff = -1;
+        paths[6].index = 6;
+
+        paths[7].rowDiff = -1;
+        paths[7].colDiff = -1;
+        paths[7].index = 7;
+    }
+
+    if(paths.size() >= 16) {
+        paths[8].rowDiff = -2;
+        paths[8].colDiff = 1;
+        paths[8].index = 8;
+
+        paths[9].rowDiff = -2;
+        paths[9].colDiff = -1;
+        paths[9].index = 9;
+
+        paths[10].rowDiff = 2;
+        paths[10].colDiff = 1;
+        paths[10].index = 10;
+
+        paths[11].rowDiff = 2;
+        paths[11].colDiff = -1;
+        paths[11].index = 11;
+
+        paths[12].rowDiff = 1;
+        paths[12].colDiff = -2;
+        paths[12].index = 12;
+
+        paths[13].rowDiff = -1;
+        paths[13].colDiff = -2;
+        paths[13].index = 13;
+
+        paths[14].rowDiff = 1;
+        paths[14].colDiff = 2;
+        paths[14].index = 14;
+
+        paths[15].rowDiff = -1;
+        paths[15].colDiff = 2;
+        paths[15].index = 15;
+    }
 }
 
-unsigned short aggregateCost(int row, int col, int d, short rowDiff, short colDiff, int rows, int cols, int disparityRange, unsigned short ***C, unsigned short ****A, unsigned short ***S, unsigned int iter) {
+unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int cols, int disparityRange, unsigned short ***C, unsigned short ****A, unsigned short ***S, unsigned int iter) {
     unsigned short aggregatedCost = 0;
     aggregatedCost += C[row][col][d];
 
@@ -91,29 +161,29 @@ unsigned short aggregateCost(int row, int col, int d, short rowDiff, short colDi
         for (unsigned int i = 0; i < iter; ++i) {
             printf(" ");
         }
-        printf("{P%d}[%d][%d](d%d)\n", getPathIndex(rowDiff, colDiff), row, col, d);
+        printf("{P%d}[%d][%d](d%d)\n", p.index, row, col, d);
     }
 
-    if (A[getPathIndex(rowDiff, colDiff)][row][col][d] != MAX_SHORT) {
+    if (A[p.index][row][col][d] != MAX_SHORT) {
         if(DEBUG) {
             for (unsigned int i = 0; i < iter; ++i) {
                 printf(" ");
             }
-            printf("{P%d}[%d][%d](d%d)-> %d<CACHED>\n", getPathIndex(rowDiff, colDiff), row, col, d, A[getPathIndex(rowDiff, colDiff)][row][col][d]);
+            printf("{P%d}[%d][%d](d%d)-> %d<CACHED>\n", p.index, row, col, d, A[p.index][row][col][d]);
         }
-        return A[getPathIndex(rowDiff, colDiff)][row][col][d];
+        return A[p.index][row][col][d];
     }
 
-    if (row + rowDiff < 0 || row + rowDiff >= rows || col + colDiff < 0 || col + colDiff >= cols) {
+    if (row + p.rowDiff < 0 || row + p.rowDiff >= rows || col + p.colDiff < 0 || col + p.colDiff >= cols) {
         // border
-        A[getPathIndex(rowDiff, colDiff)][row][col][d] = aggregatedCost;
+        A[p.index][row][col][d] = aggregatedCost;
         if(DEBUG) {
             for (unsigned int i = 0; i < iter; ++i) {
                 printf(" ");
             }
-            printf("{P%d}[%d][%d](d%d)-> %d <BORDER>\n", getPathIndex(rowDiff, colDiff), row, col, d, A[getPathIndex(rowDiff, colDiff)][row][col][d]);
+            printf("{P%d}[%d][%d](d%d)-> %d <BORDER>\n", p.index, row, col, d, A[p.index][row][col][d]);
         }
-        return A[getPathIndex(rowDiff, colDiff)][row][col][d];
+        return A[p.index][row][col][d];
 
         return aggregatedCost;
     }
@@ -122,7 +192,7 @@ unsigned short aggregateCost(int row, int col, int d, short rowDiff, short colDi
     minPrev = minPrevOther = prevPlus = prevMinus = MAX_SHORT;
 
     for (int disp = 0; disp < disparityRange; ++disp) {
-        unsigned short tmp = aggregateCost(row + rowDiff, col + colDiff, disp, rowDiff, colDiff, rows, cols, disparityRange, C, A, S, ++iter);
+        unsigned short tmp = aggregateCost(row + p.rowDiff, col + p.colDiff, disp, p, rows, cols, disparityRange, C, A, S, ++iter);
         if(minPrev > tmp) {
             minPrev = tmp;
         }
@@ -143,30 +213,26 @@ unsigned short aggregateCost(int row, int col, int d, short rowDiff, short colDi
     aggregatedCost += std::min(std::min((int)prevPlus + SMALL_PENALTY, (int)prevMinus + SMALL_PENALTY), std::min((int)prev, (int)minPrevOther + LARGE_PENALTY));
     aggregatedCost -= minPrev;
 
-    A[getPathIndex(rowDiff, colDiff)][row][col][d] = aggregatedCost;
+    A[p.index][row][col][d] = aggregatedCost;
 
     if(DEBUG) {
         for (unsigned int i = 0; i < iter; ++i) {
             printf(" ");
         }
-        printf("{P%d}[%d][%d](d%d)-> %d<CALCULATED>\n", getPathIndex(rowDiff, colDiff), row, col, d, A[getPathIndex(rowDiff, colDiff)][row][col][d]);
+        printf("{P%d}[%d][%d](d%d)-> %d<CALCULATED>\n", p.index, row, col, d, A[p.index][row][col][d]);
     }
 
     return aggregatedCost;
 }
 
-void aggregateCosts(int rows, int cols, int disparityRange, unsigned short ***C, unsigned short ****A, unsigned short ***S) {
-    for (int row = 0; row < rows; ++row) {
-        for (int col = 0; col < cols; ++col) {
-            for (int d = 0; d < disparityRange; ++d) {
-                S[row][col][d] += aggregateCost(row, col, d, 0, -1, rows, cols, disparityRange, C, A, S, 0);
-                S[row][col][d] += aggregateCost(row, col, d, 0, 1, rows, cols, disparityRange, C, A, S, 0);
-                S[row][col][d] += aggregateCost(row, col, d, 1, 0, rows, cols, disparityRange, C, A, S, 0);
-                S[row][col][d] += aggregateCost(row, col, d, -1, 0, rows, cols, disparityRange, C, A, S, 0);
-                S[row][col][d] += aggregateCost(row, col, d, 1, 1, rows, cols, disparityRange, C, A, S, 0);
-                S[row][col][d] += aggregateCost(row, col, d, 1, -1, rows, cols, disparityRange, C, A, S, 0);
-                S[row][col][d] += aggregateCost(row, col, d, -1, 1, rows, cols, disparityRange, C, A, S, 0);
-                S[row][col][d] += aggregateCost(row, col, d, -1, -1, rows, cols, disparityRange, C, A, S, 0);
+void aggregateCosts(int rows, int cols, int disparityRange, std::vector<path> &paths, unsigned short ***C, unsigned short ****A, unsigned short ***S) {
+    #pragma omp parallel for
+    for (unsigned long p = 0; p < paths.size(); ++p) {
+        for (int row = 0; row < rows; ++row) {
+            for (int col = 0; col < cols; ++col) {
+                for (int d = 0; d < disparityRange; ++d) {
+                    S[row][col][d] += aggregateCost(row, col, d, paths[p], rows, cols, disparityRange, C, A, S, 0);
+                }
             }
         }
     }
@@ -222,6 +288,14 @@ int main(int argc, char** argv) {
     unsigned short ***C; // pixel cost array W x H x D
     unsigned short ***S; // aggregated cost array W x H x D
     unsigned short ****A; // path cost array P x W x H x D
+    std::vector<path> paths;
+
+    initializePaths(paths, PATH_COUNT);
+
+    /*
+    * TODO
+    * variable LARGE_PENALTY
+    */
 
     clock_t begin = clock();
 
@@ -239,8 +313,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    A = new unsigned short ***[PATH_COUNT];
-    for (int p = 0; p < PATH_COUNT; ++p) {
+    A = new unsigned short ***[paths.size()];
+    for (unsigned long p = 0; p < paths.size(); ++p) {
         A[p] = new unsigned short **[firstImage.rows];
         for (int row = 0; row < firstImage.rows; ++row) {
             A[p][row] = new unsigned short*[firstImage.cols];
@@ -263,7 +337,7 @@ int main(int argc, char** argv) {
         printArray(C, firstImage.rows, firstImage.cols, disparityRange);
     }
     std::cout << "Aggregating costs..." << std::endl;
-    aggregateCosts(firstImage.rows, firstImage.cols, disparityRange, C, A, S);
+    aggregateCosts(firstImage.rows, firstImage.cols, disparityRange, paths, C, A, S);
 
     cv::Mat disparityMap = cv::Mat(cv::Size(firstImage.cols, firstImage.rows), CV_8UC1, cv::Scalar::all(0));
 
