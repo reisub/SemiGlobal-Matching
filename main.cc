@@ -189,7 +189,7 @@ unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int col
     }
 
     unsigned short minPrev, minPrevOther, prev, prevPlus, prevMinus;
-    minPrev = minPrevOther = prevPlus = prevMinus = MAX_SHORT;
+    prev = minPrev = minPrevOther = prevPlus = prevMinus = MAX_SHORT;
 
     for (int disp = 0; disp < disparityRange; ++disp) {
         unsigned short tmp = aggregateCost(row + p.rowDiff, col + p.colDiff, disp, p, rows, cols, disparityRange, C, A, S, ++iter);

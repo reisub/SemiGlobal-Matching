@@ -1,7 +1,7 @@
 INC=`pkg-config --cflags opencv`
 OPTIONS=`pkg-config --libs opencv`
 CXXFLAGS=-c -O3 -fopenmp -std=c++11 -Wall -Wextra
-LDFLAGS=
+LDFLAGS=-O3 -fopenmp
 SOURCES=gaussian.cc main.cc
 OBJECTS=$(SOURCES:.cc=.o)
 EXECUTABLE=main
