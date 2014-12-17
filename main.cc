@@ -226,7 +226,6 @@ unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int col
 }
 
 void aggregateCosts(int rows, int cols, int disparityRange, std::vector<path> &paths, unsigned short ***C, unsigned short ****A, unsigned short ***S) {
-    #pragma omp parallel for
     for (unsigned long p = 0; p < paths.size(); ++p) {
         for (int row = 0; row < rows; ++row) {
             for (int col = 0; col < cols; ++col) {
