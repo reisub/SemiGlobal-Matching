@@ -3,7 +3,6 @@ compiler:
   - clang
   - gcc
 before_install:
-  - sudo apt-get install libgomp1
   - sudo apt-get install libopencv-dev
   - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
   - sudo apt-get update -qq
