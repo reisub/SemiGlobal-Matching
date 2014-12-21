@@ -10,7 +10,7 @@
 #include "gaussian.h"
 
 #define BLUR_RADIUS 3
-#define PATH_COUNT 8
+#define PATH_COUNT 16
 #define MAX_SHORT 65535
 #define SMALL_PENALTY 3
 #define LARGE_PENALTY 20
