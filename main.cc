@@ -82,21 +82,23 @@ void initializePaths(std::vector<path> &paths, unsigned short pathCount) {
         paths.push_back(path());
     }
 
-    if(paths.size() >= 4) {
-        paths[0].rowDiff = -1;
-        paths[0].colDiff = 0;
+    if(paths.size() >= 2) {
+        paths[0].rowDiff = 0;
+        paths[0].colDiff = 1;
         paths[0].index = 0;
 
         paths[1].rowDiff = 0;
-        paths[1].colDiff = 1;
+        paths[1].colDiff = -1;
         paths[1].index = 1;
+    }
 
-        paths[2].rowDiff = 1;
+    if(paths.size() >= 4) {
+        paths[2].rowDiff = -1;
         paths[2].colDiff = 0;
         paths[2].index = 2;
 
-        paths[3].rowDiff = 0;
-        paths[3].colDiff = -1;
+        paths[3].rowDiff = 1;
+        paths[3].colDiff = 0;
         paths[3].index = 3;
     }
 
