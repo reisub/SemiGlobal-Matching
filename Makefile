@@ -14,20 +14,17 @@ all: $(SOURCES) $(EXECUTABLE)
 $(EXECUTABLE): $(OBJECTS)
 	$(CXX) $(LDFLAGS) $(OBJECTS) -o $@ $(INC) $(OPTIONS)
 
-simple: $(EXECUTABLE)
-	./$(EXECUTABLE) test/simple/left.png test/simple/right.png 4
-
-cones: $(EXECUTABLE)
-	./$(EXECUTABLE) test/cones/im2.png test/cones/im6.png 64
-
-teddy: $(EXECUTABLE)
-	./$(EXECUTABLE) test/teddy/im2.png test/teddy/im6.png 64
-
 bull: $(EXECUTABLE)
-	./$(EXECUTABLE) test/bull/im2.png test/bull/im6.png 32
+	./$(EXECUTABLE) test/bull/left.png test/bull/right.png 32
 
 venus: $(EXECUTABLE)
-	./$(EXECUTABLE) test/venus/im2.png test/venus/im6.png 32
+	./$(EXECUTABLE) test/venus/left.png test/venus/right.png 32
+
+cones: $(EXECUTABLE)
+	./$(EXECUTABLE) test/cones/left.png test/cones/right.png 64
+
+teddy: $(EXECUTABLE)
+	./$(EXECUTABLE) test/teddy/left.png test/teddy/right.png 64
 
 clean:
 	-rm $(OBJECTS) $(EXECUTABLE)
