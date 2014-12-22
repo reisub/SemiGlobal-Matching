@@ -13,6 +13,6 @@ Resources
 
 1. Hirschmüller, H., Accurate and Efficient Stereo Processing by Semi-Global Matching and Mutual Information, IEEE Conference on Computer Vision and Pattern Recognition, June 2005
 2. Hirschmüller, H., Stereo Processing by Semiglobal Matching and Mutual Information, IEEE Transactions on pattern analysis and machine intelligence, Vol. 30, No. 2, February 2008
-3. Birchfield, S., Tomasi, C., Depth Discontinuities by Pixel-to-Pixel Stereo, Proceedings of the 1998 IEEE International Conference on Computer Vision, 
+3. Birchfield, S., Tomasi, C., Depth Discontinuities by Pixel-to-Pixel Stereo, Proceedings of the 1998 IEEE International Conference on Computer Vision, January 1998
 4. OpenCV reference manual, release 2.4.9.0,  21.4.2014.
 5. Middlebury Stereo Datasets, http://vision.middlebury.edu/stereo/data/, 1.12.2014.
