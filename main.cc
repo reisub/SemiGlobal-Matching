@@ -240,7 +240,7 @@ void aggregateCosts(int rows, int cols, int disparityRange, std::vector<path> &p
 }
 
 void computeDisparity(unsigned short ***S, int rows, int cols, int disparityRange, cv::Mat &disparityMap) {
-    unsigned int disparity, minCost;
+    unsigned int disparity = 0, minCost;
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
             minCost = 65535;
