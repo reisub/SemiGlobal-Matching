@@ -30,7 +30,7 @@ def run(cmd, args)
 	command = "#{cmd} #{args.join(' ')}"
 	puts command.bold
 	ret = `#{command}`
-	abort "Failed running command '#{command}'!" unless $?.success?
+	abort "Failed running command '#{command}'!".red unless $?.success?
 	ret
 end
 
