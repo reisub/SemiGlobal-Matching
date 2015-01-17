@@ -54,5 +54,5 @@ end
 run('make', ['sgm', 'compare'])
 test('test/bull/left.png', 'test/bull/right.png', 32, 'test/bull/ground.png')
 test('test/venus/left.png', 'test/venus/right.png', 32, 'test/venus/ground.png')
-test('test/cones/left.png', 'test/cones/right.png', 64, 'test/cones/ground.png')
-test('test/teddy/left.png', 'test/teddy/right.png', 64, 'test/teddy/ground.png')
+# test('test/cones/left.png', 'test/cones/right.png', 64, 'test/cones/ground.png')
+# test('test/teddy/left.png', 'test/teddy/right.png', 64, 'test/teddy/ground.png')
