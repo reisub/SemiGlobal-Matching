@@ -5,8 +5,11 @@ LDFLAGS=-O3
 SOURCES=gaussian.cc main.cc
 OBJECTS=$(SOURCES:.cc=.o)
 EXECUTABLE=sgm
+TEST_SOURCES=compare.cc
+TEST_OBJECTS=$(TEST_SOURCES:.cc=.o)
+TEST_EXECUTABLE=compare
 
-all: $(SOURCES) $(EXECUTABLE)
+all: $(SOURCES) $(EXECUTABLE) $(TEST_EXECUTABLE)
 
 .cc.o:
 	$(CXX) $(CXXFLAGS) $< -o $@ $(INC)
@@ -14,19 +17,22 @@ all: $(SOURCES) $(EXECUTABLE)
 $(EXECUTABLE): $(OBJECTS)
 	$(CXX) $(LDFLAGS) $(OBJECTS) -o $@ $(INC) $(OPTIONS)
 
+$(TEST_EXECUTABLE): $(TEST_OBJECTS)
+	$(CXX) $(LDFLAGS) $(TEST_OBJECTS) -o $@ $(INC) $(OPTIONS)
+
 bull: $(EXECUTABLE)
-	./$(EXECUTABLE) test/bull/left.png test/bull/right.png 32
+	./$(EXECUTABLE) test/bull/left.png test/bull/right.png out.png 32
 
 venus: $(EXECUTABLE)
-	./$(EXECUTABLE) test/venus/left.png test/venus/right.png 32
+	./$(EXECUTABLE) test/venus/left.png test/venus/right.png out.png 32
 
 cones: $(EXECUTABLE)
-	./$(EXECUTABLE) test/cones/left.png test/cones/right.png 64
+	./$(EXECUTABLE) test/cones/left.png test/cones/right.png out.png 64
 
 teddy: $(EXECUTABLE)
-	./$(EXECUTABLE) test/teddy/left.png test/teddy/right.png 64
+	./$(EXECUTABLE) test/teddy/left.png test/teddy/right.png out.png 64
 
 clean:
-	-rm $(OBJECTS) $(EXECUTABLE)
+	-rm $(OBJECTS) $(EXECUTABLE) $(TEST_OBJECTS) $(TEST_EXECUTABLE)
 
 .PHONY: clean

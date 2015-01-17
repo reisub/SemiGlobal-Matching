@@ -28,3 +28,7 @@
 *.app
 main
 sgm
+compare
+
+# Outputs
+out.png

@@ -255,37 +255,38 @@ void computeDisparity(unsigned short ***S, int rows, int cols, int disparityRang
     }
 }
 
-void showDisparityMap(cv::Mat &disparityMap, int disparityRange) {
+void saveDisparityMap(cv::Mat &disparityMap, int disparityRange, char* outputFile) {
     double factor = 256.0 / disparityRange;
     for (int row = 0; row < disparityMap.rows; ++row) {
         for (int col = 0; col < disparityMap.cols; ++col) {
             disparityMap.at<uchar>(row, col) *= factor;
         }
     }
-    cv::namedWindow("Disparity map", CV_WINDOW_AUTOSIZE);
-    cv::imshow("Disparity map", disparityMap);
-    cv::waitKey(0);
+    cv::imwrite(outputFile, disparityMap);
 }
-
 
 int main(int argc, char** argv) {
 
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <left image> <right image> <disparity range>" << std::endl;
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " <left image> <right image> <output image file> <disparity range>" << std::endl;
         return -1;
     }
 
+    char *firstFileName = argv[1];
+    char *secondFileName = argv[2];
+    char *outFileName = argv[3];
+
     cv::Mat firstImage;
     cv::Mat secondImage;
-    firstImage = cv::imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
-    secondImage = cv::imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE);
+    firstImage = cv::imread(firstFileName, CV_LOAD_IMAGE_GRAYSCALE);
+    secondImage = cv::imread(secondFileName, CV_LOAD_IMAGE_GRAYSCALE);
 
     if(!firstImage.data || !secondImage.data) {
         std::cerr <<  "Could not open or find one of the images!" << std::endl;
         return -1;
     }
 
-    unsigned int disparityRange = atoi(argv[3]);
+    unsigned int disparityRange = atoi(argv[4]);
     unsigned short ***C; // pixel cost array W x H x D
     unsigned short ***S; // aggregated cost array W x H x D
     unsigned short ****A; // path cost array P x W x H x D
@@ -350,7 +351,7 @@ int main(int argc, char** argv) {
 
     printf("Done in %.2lf seconds.\n", elapsed_secs);
 
-    showDisparityMap(disparityMap, disparityRange);
+    saveDisparityMap(disparityMap, disparityRange, outFileName);
 
     return 0;
 }
