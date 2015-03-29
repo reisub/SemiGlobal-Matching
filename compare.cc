@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
     }
 
     if (firstImage.rows != secondImage.rows || firstImage.cols != secondImage.cols) {
-        std::cerr << "Warning: The images have different dimensions!" << std::endl;
+        std::cerr << "Error: The images have different dimensions!" << std::endl;
         return -2;
     }
 

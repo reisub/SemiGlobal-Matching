@@ -32,6 +32,9 @@ cones: $(EXECUTABLE)
 teddy: $(EXECUTABLE)
 	./$(EXECUTABLE) test/teddy/left.png test/teddy/right.png out.png 64
 
+kitti: $(EXECUTABLE)
+	./$(EXECUTABLE) test/kitti/left.png test/kitti/right.png out.png 256
+
 clean:
 	-rm $(OBJECTS) $(EXECUTABLE) $(TEST_OBJECTS) $(TEST_EXECUTABLE)
 
