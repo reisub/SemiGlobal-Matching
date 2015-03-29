@@ -11,7 +11,7 @@
 
 #define BLUR_RADIUS 3
 #define PATH_COUNT 16
-#define MAX_SHORT 65535
+#define MAX_SHORT std::numeric_limits<unsigned short>::max()
 #define SMALL_PENALTY 3
 #define LARGE_PENALTY 20
 #define DEBUG false
@@ -155,7 +155,7 @@ void initializePaths(std::vector<path> &paths, unsigned short pathCount) {
     }
 }
 
-unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int cols, int disparityRange, unsigned short ***C, unsigned short ****A, unsigned short ***S, unsigned int iter) {
+unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int cols, int disparityRange, unsigned short ***C, unsigned short ***A, unsigned short ***S, unsigned int iter) {
     unsigned short aggregatedCost = 0;
     aggregatedCost += C[row][col][d];
 
@@ -166,26 +166,26 @@ unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int col
         printf("{P%d}[%d][%d](d%d)\n", p.index, row, col, d);
     }
 
-    if (A[p.index][row][col][d] != MAX_SHORT) {
+    if (A[row][col][d] != MAX_SHORT) {
         if(DEBUG) {
             for (unsigned int i = 0; i < iter; ++i) {
                 printf(" ");
             }
-            printf("{P%d}[%d][%d](d%d)-> %d<CACHED>\n", p.index, row, col, d, A[p.index][row][col][d]);
+            printf("{P%d}[%d][%d](d%d)-> %d<CACHED>\n", p.index, row, col, d, A[row][col][d]);
         }
-        return A[p.index][row][col][d];
+        return A[row][col][d];
     }
 
     if (row + p.rowDiff < 0 || row + p.rowDiff >= rows || col + p.colDiff < 0 || col + p.colDiff >= cols) {
         // border
-        A[p.index][row][col][d] = aggregatedCost;
+        A[row][col][d] = aggregatedCost;
         if(DEBUG) {
             for (unsigned int i = 0; i < iter; ++i) {
                 printf(" ");
             }
-            printf("{P%d}[%d][%d](d%d)-> %d <BORDER>\n", p.index, row, col, d, A[p.index][row][col][d]);
+            printf("{P%d}[%d][%d](d%d)-> %d <BORDER>\n", p.index, row, col, d, A[row][col][d]);
         }
-        return A[p.index][row][col][d];
+        return A[row][col][d];
 
         return aggregatedCost;
     }
@@ -215,20 +215,30 @@ unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int col
     aggregatedCost += std::min(std::min((int)prevPlus + SMALL_PENALTY, (int)prevMinus + SMALL_PENALTY), std::min((int)prev, (int)minPrevOther + LARGE_PENALTY));
     aggregatedCost -= minPrev;
 
-    A[p.index][row][col][d] = aggregatedCost;
+    A[row][col][d] = aggregatedCost;
 
     if(DEBUG) {
         for (unsigned int i = 0; i < iter; ++i) {
             printf(" ");
         }
-        printf("{P%d}[%d][%d](d%d)-> %d<CALCULATED>\n", p.index, row, col, d, A[p.index][row][col][d]);
+        printf("{P%d}[%d][%d](d%d)-> %d<CALCULATED>\n", p.index, row, col, d, A[row][col][d]);
     }
 
     return aggregatedCost;
 }
 
-void aggregateCosts(int rows, int cols, int disparityRange, std::vector<path> &paths, unsigned short ***C, unsigned short ****A, unsigned short ***S) {
+void aggregateCosts(int rows, int cols, int disparityRange, std::vector<path> &paths, unsigned short ***C, unsigned short ***A, unsigned short ***S) {
     for (unsigned long p = 0; p < paths.size(); ++p) {
+        // TODO clear path array
+        unsigned int size = rows * cols * disparityRange;
+        for (int row = 0; row < rows; ++row) {
+            for (int col = 0; col < cols; ++col) {
+                for (int d = 0; d < disparityRange; ++d) {
+                    A[row][col][d] = MAX_SHORT;
+                }
+            }
+        }
+
         for (int row = 0; row < rows; ++row) {
             for (int col = 0; col < cols; ++col) {
                 for (int d = 0; d < disparityRange; ++d) {
@@ -243,7 +253,7 @@ void computeDisparity(unsigned short ***S, int rows, int cols, int disparityRang
     unsigned int disparity = 0, minCost;
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
-            minCost = 65535;
+            minCost = MAX_SHORT;
             for (int d = disparityRange - 1; d >= 0; --d) {
                 if(minCost > S[row][col][d]) {
                     minCost = S[row][col][d];
@@ -289,7 +299,7 @@ int main(int argc, char** argv) {
     unsigned int disparityRange = atoi(argv[4]);
     unsigned short ***C; // pixel cost array W x H x D
     unsigned short ***S; // aggregated cost array W x H x D
-    unsigned short ****A; // path cost array P x W x H x D
+    unsigned short ***A; // single path cost array W x H x D
     std::vector<path> paths;
 
     initializePaths(paths, PATH_COUNT);
@@ -315,16 +325,13 @@ int main(int argc, char** argv) {
         }
     }
 
-    A = new unsigned short ***[paths.size()];
-    for (unsigned long p = 0; p < paths.size(); ++p) {
-        A[p] = new unsigned short **[firstImage.rows];
-        for (int row = 0; row < firstImage.rows; ++row) {
-            A[p][row] = new unsigned short*[firstImage.cols];
-            for (int col = 0; col < firstImage.cols; ++col) {
-                A[p][row][col] = new unsigned short[disparityRange];
-                for (unsigned int d = 0; d < disparityRange; ++d) {
-                    A[p][row][col][d] = MAX_SHORT;
-                }
+    A = new unsigned short **[firstImage.rows];
+    for (int row = 0; row < firstImage.rows; ++row) {
+        A[row] = new unsigned short*[firstImage.cols];
+        for (int col = 0; col < firstImage.cols; ++col) {
+            A[row][col] = new unsigned short[disparityRange];
+            for (unsigned int d = 0; d < disparityRange; ++d) {
+                A[row][col][d] = MAX_SHORT; // TODO set before each path calculation
             }
         }
     }
