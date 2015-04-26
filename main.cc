@@ -10,7 +10,7 @@
 #include "gaussian.h"
 
 #define BLUR_RADIUS 3
-#define PATH_COUNT 16
+#define PATHS_PER_SCAN 4
 #define MAX_SHORT std::numeric_limits<unsigned short>::max()
 #define SMALL_PENALTY 3
 #define LARGE_PENALTY 20
@@ -77,81 +77,97 @@ void calculatePixelCost(cv::Mat &firstImage, cv::Mat &secondImage, int disparity
     }
 }
 
-void initializePaths(std::vector<path> &paths, unsigned short pathCount) {
+// pathCount can be 1, 2, 4, or 8
+void initializeFirstScanPaths(std::vector<path> &paths, unsigned short pathCount) {
     for (unsigned short i = 0; i < pathCount; ++i) {
         paths.push_back(path());
     }
 
-    if(paths.size() >= 2) {
+    if(paths.size() >= 1) {
         paths[0].rowDiff = 0;
-        paths[0].colDiff = 1;
-        paths[0].index = 0;
+        paths[0].colDiff = -1;
+        paths[0].index = 1;
+    }
 
-        paths[1].rowDiff = 0;
-        paths[1].colDiff = -1;
-        paths[1].index = 1;
+    if(paths.size() >= 2) {
+        paths[1].rowDiff = -1;
+        paths[1].colDiff = 0;
+        paths[1].index = 2;
     }
 
     if(paths.size() >= 4) {
         paths[2].rowDiff = -1;
-        paths[2].colDiff = 0;
-        paths[2].index = 2;
+        paths[2].colDiff = 1;
+        paths[2].index = 4;
 
-        paths[3].rowDiff = 1;
-        paths[3].colDiff = 0;
-        paths[3].index = 3;
+        paths[3].rowDiff = -1;
+        paths[3].colDiff = -1;
+        paths[3].index = 7;
     }
 
     if(paths.size() >= 8) {
-        paths[4].rowDiff = -1;
+        paths[4].rowDiff = -2;
         paths[4].colDiff = 1;
-        paths[4].index = 4;
+        paths[4].index = 8;
 
-        paths[5].rowDiff = 1;
-        paths[5].colDiff = 1;
-        paths[5].index = 5;
+        paths[5].rowDiff = -2;
+        paths[5].colDiff = -1;
+        paths[5].index = 9;
 
-        paths[6].rowDiff = 1;
-        paths[6].colDiff = -1;
-        paths[6].index = 6;
+        paths[6].rowDiff = -1;
+        paths[6].colDiff = -2;
+        paths[6].index = 13;
 
         paths[7].rowDiff = -1;
-        paths[7].colDiff = -1;
-        paths[7].index = 7;
+        paths[7].colDiff = 2;
+        paths[7].index = 15;
+    }
+}
+
+// pathCount can be 1, 2, 4, or 8
+void initializeSecondScanPaths(std::vector<path> &paths, unsigned short pathCount) {
+    for (unsigned short i = 0; i < pathCount; ++i) {
+        paths.push_back(path());
     }
 
-    if(paths.size() >= 16) {
-        paths[8].rowDiff = -2;
-        paths[8].colDiff = 1;
-        paths[8].index = 8;
+    if(paths.size() >= 1) {
+        paths[0].rowDiff = 0;
+        paths[0].colDiff = 1;
+        paths[0].index = 0;
+    }
 
-        paths[9].rowDiff = -2;
-        paths[9].colDiff = -1;
-        paths[9].index = 9;
+    if(paths.size() >= 2) {
+        paths[1].rowDiff = 1;
+        paths[1].colDiff = 0;
+        paths[1].index = 3;
+    }
 
-        paths[10].rowDiff = 2;
-        paths[10].colDiff = 1;
-        paths[10].index = 10;
+    if(paths.size() >= 4) {
+        paths[2].rowDiff = 1;
+        paths[2].colDiff = 1;
+        paths[2].index = 5;
 
-        paths[11].rowDiff = 2;
-        paths[11].colDiff = -1;
-        paths[11].index = 11;
+        paths[3].rowDiff = 1;
+        paths[3].colDiff = -1;
+        paths[3].index = 6;
+    }
 
-        paths[12].rowDiff = 1;
-        paths[12].colDiff = -2;
-        paths[12].index = 12;
+    if(paths.size() >= 8) {
+        paths[4].rowDiff = 2;
+        paths[4].colDiff = 1;
+        paths[4].index = 10;
 
-        paths[13].rowDiff = -1;
-        paths[13].colDiff = -2;
-        paths[13].index = 13;
+        paths[5].rowDiff = 2;
+        paths[5].colDiff = -1;
+        paths[5].index = 11;
 
-        paths[14].rowDiff = 1;
-        paths[14].colDiff = 2;
-        paths[14].index = 14;
+        paths[6].rowDiff = 1;
+        paths[6].colDiff = -2;
+        paths[6].index = 12;
 
-        paths[15].rowDiff = -1;
-        paths[15].colDiff = 2;
-        paths[15].index = 15;
+        paths[7].rowDiff = 1;
+        paths[7].colDiff = 2;
+        paths[7].index = 14;
     }
 }
 
@@ -166,19 +182,9 @@ unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int col
         printf("{P%d}[%d][%d](d%d)\n", p.index, row, col, d);
     }
 
-    if (A[row][col][d] != MAX_SHORT) {
-        if(DEBUG) {
-            for (unsigned int i = 0; i < iter; ++i) {
-                printf(" ");
-            }
-            printf("{P%d}[%d][%d](d%d)-> %d<CACHED>\n", p.index, row, col, d, A[row][col][d]);
-        }
-        return A[row][col][d];
-    }
-
     if (row + p.rowDiff < 0 || row + p.rowDiff >= rows || col + p.colDiff < 0 || col + p.colDiff >= cols) {
         // border
-        A[row][col][d] = aggregatedCost;
+        A[row][col][d] += aggregatedCost;
         if(DEBUG) {
             for (unsigned int i = 0; i < iter; ++i) {
                 printf(" ");
@@ -186,15 +192,13 @@ unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int col
             printf("{P%d}[%d][%d](d%d)-> %d <BORDER>\n", p.index, row, col, d, A[row][col][d]);
         }
         return A[row][col][d];
-
-        return aggregatedCost;
     }
 
     unsigned short minPrev, minPrevOther, prev, prevPlus, prevMinus;
     prev = minPrev = minPrevOther = prevPlus = prevMinus = MAX_SHORT;
 
     for (int disp = 0; disp < disparityRange; ++disp) {
-        unsigned short tmp = aggregateCost(row + p.rowDiff, col + p.colDiff, disp, p, rows, cols, disparityRange, C, A, S, ++iter);
+        unsigned short tmp = A[row + p.rowDiff][col + p.colDiff][disp];
         if(minPrev > tmp) {
             minPrev = tmp;
         }
@@ -215,7 +219,7 @@ unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int col
     aggregatedCost += std::min(std::min((int)prevPlus + SMALL_PENALTY, (int)prevMinus + SMALL_PENALTY), std::min((int)prev, (int)minPrevOther + LARGE_PENALTY));
     aggregatedCost -= minPrev;
 
-    A[row][col][d] = aggregatedCost;
+    A[row][col][d] += aggregatedCost;
 
     if(DEBUG) {
         for (unsigned int i = 0; i < iter; ++i) {
@@ -224,25 +228,31 @@ unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int col
         printf("{P%d}[%d][%d](d%d)-> %d<CALCULATED>\n", p.index, row, col, d, A[row][col][d]);
     }
 
-    return aggregatedCost;
+    return A[row][col][d];
 }
 
-void aggregateCosts(int rows, int cols, int disparityRange, std::vector<path> &paths, unsigned short ***C, unsigned short ***A, unsigned short ***S) {
-    for (unsigned long p = 0; p < paths.size(); ++p) {
-        // TODO clear path array
-        unsigned int size = rows * cols * disparityRange;
-        for (int row = 0; row < rows; ++row) {
-            for (int col = 0; col < cols; ++col) {
-                for (int d = 0; d < disparityRange; ++d) {
-                    A[row][col][d] = MAX_SHORT;
+void aggregateCosts(int rows, int cols, int disparityRange, unsigned short ***C, unsigned short ****A, unsigned short ***S) {
+    std::vector<path> firstScanPaths;
+    std::vector<path> secondScanPaths;
+
+    initializeFirstScanPaths(firstScanPaths, PATHS_PER_SCAN);
+    initializeSecondScanPaths(secondScanPaths, PATHS_PER_SCAN);
+
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < cols; ++col) {
+            for (int d = 0; d < disparityRange; ++d) {
+                for (int path = 0; path < firstScanPaths.size(); ++path) {
+                    S[row][col][d] += aggregateCost(row, col, d, firstScanPaths[path], rows, cols, disparityRange, C, A[path], S, 0);
                 }
             }
         }
+    }
 
-        for (int row = 0; row < rows; ++row) {
-            for (int col = 0; col < cols; ++col) {
-                for (int d = 0; d < disparityRange; ++d) {
-                    S[row][col][d] += aggregateCost(row, col, d, paths[p], rows, cols, disparityRange, C, A, S, 0);
+    for (int row = rows - 1; row >= 0; --row) {
+        for (int col = cols - 1; col >= 0; --col) {
+            for (int d = 0; d < disparityRange; ++d) {
+                for (int path = 0; path < secondScanPaths.size(); ++path) {
+                    S[row][col][d] += aggregateCost(row, col, d, secondScanPaths[path], rows, cols, disparityRange, C, A[path], S, 0);
                 }
             }
         }
@@ -299,10 +309,7 @@ int main(int argc, char** argv) {
     unsigned int disparityRange = atoi(argv[4]);
     unsigned short ***C; // pixel cost array W x H x D
     unsigned short ***S; // aggregated cost array W x H x D
-    unsigned short ***A; // single path cost array W x H x D
-    std::vector<path> paths;
-
-    initializePaths(paths, PATH_COUNT);
+    unsigned short ****A; // single path cost array 2 x W x H x D
 
     /*
     * TODO
@@ -325,13 +332,16 @@ int main(int argc, char** argv) {
         }
     }
 
-    A = new unsigned short **[firstImage.rows];
-    for (int row = 0; row < firstImage.rows; ++row) {
-        A[row] = new unsigned short*[firstImage.cols];
-        for (int col = 0; col < firstImage.cols; ++col) {
-            A[row][col] = new unsigned short[disparityRange];
-            for (unsigned int d = 0; d < disparityRange; ++d) {
-                A[row][col][d] = MAX_SHORT; // TODO set before each path calculation
+    A = new unsigned short ***[PATHS_PER_SCAN];
+    for(int path = 0; path < PATHS_PER_SCAN; ++path) {
+        A[path] = new unsigned short **[firstImage.rows];
+        for (int row = 0; row < firstImage.rows; ++row) {
+            A[path][row] = new unsigned short*[firstImage.cols];
+            for (int col = 0; col < firstImage.cols; ++col) {
+                A[path][row][col] = new unsigned short[disparityRange];
+                for (unsigned int d = 0; d < disparityRange; ++d) {
+                    A[path][row][col][d] = 0;
+                }
             }
         }
     }
@@ -346,7 +356,7 @@ int main(int argc, char** argv) {
         printArray(C, firstImage.rows, firstImage.cols, disparityRange);
     }
     std::cout << "Aggregating costs..." << std::endl;
-    aggregateCosts(firstImage.rows, firstImage.cols, disparityRange, paths, C, A, S);
+    aggregateCosts(firstImage.rows, firstImage.cols, disparityRange, C, A, S);
 
     cv::Mat disparityMap = cv::Mat(cv::Size(firstImage.cols, firstImage.rows), CV_8UC1, cv::Scalar::all(0));
 
