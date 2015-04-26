@@ -231,8 +231,8 @@ void aggregateCosts(int rows, int cols, int disparityRange, unsigned short ***C,
 
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
-            for (int d = 0; d < disparityRange; ++d) {
-                for (unsigned int path = 0; path < firstScanPaths.size(); ++path) {
+            for (unsigned int path = 0; path < firstScanPaths.size(); ++path) {
+                for (int d = 0; d < disparityRange; ++d) {
                     S[row][col][d] += aggregateCost(row, col, d, firstScanPaths[path], rows, cols, disparityRange, C, A[path]);
                 }
             }
@@ -241,8 +241,8 @@ void aggregateCosts(int rows, int cols, int disparityRange, unsigned short ***C,
 
     for (int row = rows - 1; row >= 0; --row) {
         for (int col = cols - 1; col >= 0; --col) {
-            for (int d = 0; d < disparityRange; ++d) {
-                for (unsigned int path = 0; path < secondScanPaths.size(); ++path) {
+            for (unsigned int path = 0; path < secondScanPaths.size(); ++path) {
+                for (int d = 0; d < disparityRange; ++d) {
                     S[row][col][d] += aggregateCost(row, col, d, secondScanPaths[path], rows, cols, disparityRange, C, A[path]);
                 }
             }
