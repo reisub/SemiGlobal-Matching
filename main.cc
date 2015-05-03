@@ -222,6 +222,15 @@ unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int col
     return A[row][col][d];
 }
 
+float printProgress(unsigned int current, unsigned int max, int lastProgressPrinted) {
+    int progress = floor(100 * current / (float) max);
+    if(progress >= lastProgressPrinted + 5) {
+        lastProgressPrinted = lastProgressPrinted + 5;
+        std::cout << lastProgressPrinted << "%" << std::endl;
+    }
+    return lastProgressPrinted;
+}
+
 void aggregateCosts(int rows, int cols, int disparityRange, unsigned short ***C, unsigned short ****A, unsigned short ***S) {
     std::vector<path> firstScanPaths;
     std::vector<path> secondScanPaths;
@@ -229,6 +238,8 @@ void aggregateCosts(int rows, int cols, int disparityRange, unsigned short ***C,
     initializeFirstScanPaths(firstScanPaths, PATHS_PER_SCAN);
     initializeSecondScanPaths(secondScanPaths, PATHS_PER_SCAN);
 
+    int lastProgressPrinted = 0;
+    std::cout << "First scan..." << std::endl;
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
             for (unsigned int path = 0; path < firstScanPaths.size(); ++path) {
@@ -237,8 +248,11 @@ void aggregateCosts(int rows, int cols, int disparityRange, unsigned short ***C,
                 }
             }
         }
+        lastProgressPrinted = printProgress(row, rows - 1, lastProgressPrinted);
     }
 
+    lastProgressPrinted = 0;
+    std::cout << "Second scan..." << std::endl;
     for (int row = rows - 1; row >= 0; --row) {
         for (int col = cols - 1; col >= 0; --col) {
             for (unsigned int path = 0; path < secondScanPaths.size(); ++path) {
@@ -247,6 +261,7 @@ void aggregateCosts(int rows, int cols, int disparityRange, unsigned short ***C,
                 }
             }
         }
+        lastProgressPrinted = printProgress(rows - 1 - row, rows - 1, lastProgressPrinted);
     }
 }
 
