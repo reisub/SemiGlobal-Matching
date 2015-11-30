@@ -8,6 +8,8 @@ About
 
 This is a simple implementation of the SGM algorithm with the Birchfield/Tomasi pixelwise matching cost using the OpenCV library. It was created for a school project. It currently runs on one thread only and is relatively slow. Also, there is no postprocessing of the disparity map so there are visible errors in the disparity map.
 
+It builds with clang and gcc.
+
 Resources
 ---------
 
