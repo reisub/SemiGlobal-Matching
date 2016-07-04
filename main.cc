@@ -38,8 +38,15 @@ unsigned short calculatePixelCostOneWayBT(int row, int leftCol, int rightCol, co
 
     char leftValue, rightValue, beforeRightValue, afterRightValue, rightValueMinus, rightValuePlus, rightValueMin, rightValueMax;
 
-    leftValue = leftImage.at<uchar>(row, leftCol);
-    rightValue = rightImage.at<uchar>(row, rightCol);
+    if(leftCol<0)
+    	leftValue = 0;
+    else
+	    leftValue = leftImage.at<uchar>(row, leftCol);
+
+	if(rightCol<0)
+		rightValue = 0;
+	else
+	    rightValue = rightImage.at<uchar>(row, rightCol);
 
     if (rightCol > 0) {
         beforeRightValue = rightImage.at<uchar>(row, rightCol - 1);
@@ -47,7 +54,8 @@ unsigned short calculatePixelCostOneWayBT(int row, int leftCol, int rightCol, co
         beforeRightValue = rightValue;
     }
 
-    if (rightCol + 1 < rightImage.cols) {
+	//std::cout << rightCol <<" " <<leftCol<< std::endl;   	
+    if (rightCol + 1 < rightImage.cols && rightCol>0) {
         afterRightValue = rightImage.at<uchar>(row, rightCol + 1);
     } else {
         afterRightValue = rightValue;
@@ -71,6 +79,7 @@ void calculatePixelCost(cv::Mat &firstImage, cv::Mat &secondImage, int disparity
     for (int row = 0; row < firstImage.rows; ++row) {
         for (int col = 0; col < firstImage.cols; ++col) {
             for (int d = 0; d < disparityRange; ++d) {
+            	//std::cout << col << " " << d << " "<<disparityRange << " " << col - d << std::endl;
                 C[row][col][d] = calculatePixelCostBT(row, col, col - d, firstImage, secondImage);
             }
         }
