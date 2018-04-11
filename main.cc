@@ -213,8 +213,8 @@ unsigned short aggregateCost(int row, int col, int d, path &p, int rows, int col
         } else if (disp == d - 1) {
             prevMinus = tmp;
         } else {
-            if(minPrevOther > tmp + LARGE_PENALTY) {
-                minPrevOther = tmp + LARGE_PENALTY;
+            if(minPrevOther > tmp) {
+                minPrevOther = tmp;
             }
         }
     }
